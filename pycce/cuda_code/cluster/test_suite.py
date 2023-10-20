@@ -3,6 +3,11 @@ from pycce.find_clusters import find_subclusters
 from pycce.cuda_code.cluster.find_subclusters import find_subclusters_gpu
 import numpy as np
 import scipy
+from pycce.logging import get_logger
+
+logger = get_logger(__file__)
+
+import cupy as cp
 
 def generate_graph(num_vertices, max_edges_per_vertex):
     '''
@@ -30,11 +35,12 @@ def generate_graph(num_vertices, max_edges_per_vertex):
 class TestFindSubclusters(unittest.TestCase):
 
     def test_acc_strong_false(self):
+        logger.info(f"test strong: false")
         nvertices = 1000
         max_degree = 5
         bonds = generate_graph(nvertices, max_degree)
         nbond = bonds.shape[0]
-        print(f"generate {nbond} bonds.")
+        logger.info(f"generate {nbond} bonds.\n")
 
         rows, cols = bonds.T
         data = np.ones_like(rows)
@@ -45,17 +51,18 @@ class TestFindSubclusters(unittest.TestCase):
         labels = np.zeros(nvertices, dtype=np.int32)
         n_components = 1
 
-        # Call the first function
-        result1 = find_subclusters(3, graph, labels, n_components, False)[3]
-        result2 = find_subclusters_gpu(bonds, strong=False).get()
-        self.assertTrue(np.allclose(result1, result2))
+        result1 = find_subclusters(3, graph, labels, n_components, False)
+        result2 = find_subclusters_gpu(3, graph, labels, n_components, False)
+        for value1, value2 in zip(result1.values(), result2.values()):
+            self.assertTrue(np.allclose(value1, value2))
 
     def test_acc_strong_true(self):
+        logger.info(f"test strong: true")
         nvertices = 1000
         max_degree = 5
         bonds = generate_graph(nvertices, max_degree)
         nbond = bonds.shape[0]
-        print(f"generate {nbond} bonds.")
+        logger.info(f"generate {nbond} bonds.\n")
 
         rows, cols = bonds.T
         data = np.ones_like(rows)
@@ -66,10 +73,10 @@ class TestFindSubclusters(unittest.TestCase):
         labels = np.zeros(nvertices, dtype=np.int32)
         n_components = 1
 
-        # Call the first function
-        result1 = find_subclusters(3, graph, labels, n_components, True)[3]
-        result2 = find_subclusters_gpu(bonds, strong=True).get()
-        self.assertTrue(np.allclose(result1, result2))
+        result1 = find_subclusters(3, graph, labels, n_components, True)
+        result2 = find_subclusters_gpu(3, graph, labels, n_components, True)
+        for value1, value2 in zip(result1.values(), result2.values()):
+            self.assertTrue(np.allclose(value1, value2))
 
 if __name__ == '__main__':
     unittest.main()
