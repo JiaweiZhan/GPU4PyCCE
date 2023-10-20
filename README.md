@@ -31,6 +31,6 @@ Full documentation is available online at [Read the Docs](https://pycce.readthed
 ### GPU Performance Track
 
 1 Tesla V100:
-|   GPU-Support    |                         Performance                         | 
-|       :---       |                            :----:                           |
-| find_subclusters | x100 SpeedUp (~3000 bonds); x1000 SpeedUp (~15,000 bonds)   |
+|   GPU-Support    |                         Performance                           | 
+|       :---       |                            :----:                             |
+| find_subclusters | x100 SpeedUp (~3,000 bonds); x1,000 SpeedUp (~15,000 bonds)   |
