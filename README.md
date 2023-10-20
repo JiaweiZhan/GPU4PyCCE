@@ -28,3 +28,6 @@ See `examples` folder for tutorials and scripts of calculations.
 
 Full documentation is available online at [Read the Docs](https://pycce.readthedocs.io/en/latest/). 
 
+|   GPU-Support    |                         Performance                         | 
+|       :---       |                            :----:                           |
+| find_subclusters | x100 SpeedUp (~3000 bonds); x1000 SpeedUp (~15,000 bonds)   |
