@@ -4,6 +4,8 @@ import numpy as np
 from numba import jit
 from numba.typed import List
 
+import subprocess
+
 
 def rotmatrix(initial_vector, final_vector):
     r"""
@@ -343,3 +345,23 @@ def vector_from_s(s, d):
     state_number = np.int32((d - 1) / 2 - s)
     vec_nucleus[state_number] = 1
     return vec_nucleus
+
+
+def is_gpu_supported():
+    try:
+        # Execute the `nvidia-smi` command and get its output
+        result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        # If the command succeeded, it's likely an NVIDIA GPU is supported
+        if result.returncode == 0 and "NVIDIA" in result.stdout:
+            try:
+                import cupy
+                return True
+            except ImportError:
+                warnings.warn('Could not find cupy. Using the cpu implementation instead')
+                return False
+        return False
+
+    except FileNotFoundError:
+        # nvidia-smi was not found
+        return False

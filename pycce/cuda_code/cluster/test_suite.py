@@ -1,5 +1,5 @@
 import unittest
-from pycce.find_clusters import find_subclusters
+from pycce.find_clusters import find_subclusters_cpu
 from pycce.cuda_code.cluster.find_subclusters import find_subclusters_gpu
 import numpy as np
 import scipy
@@ -51,7 +51,7 @@ class TestFindSubclusters(unittest.TestCase):
         labels = np.zeros(nvertices, dtype=np.int32)
         n_components = 1
 
-        result1 = find_subclusters(3, graph, labels, n_components, False)
+        result1 = find_subclusters_cpu(3, graph, labels, n_components, False)
         result2 = find_subclusters_gpu(3, graph, labels, n_components, False)
         for value1, value2 in zip(result1.values(), result2.values()):
             self.assertTrue(np.allclose(value1, value2))
@@ -73,7 +73,7 @@ class TestFindSubclusters(unittest.TestCase):
         labels = np.zeros(nvertices, dtype=np.int32)
         n_components = 1
 
-        result1 = find_subclusters(3, graph, labels, n_components, True)
+        result1 = find_subclusters_cpu(3, graph, labels, n_components, True)
         result2 = find_subclusters_gpu(3, graph, labels, n_components, True)
         for value1, value2 in zip(result1.values(), result2.values()):
             self.assertTrue(np.allclose(value1, value2))

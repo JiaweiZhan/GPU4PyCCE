@@ -3,7 +3,7 @@ import cupy as cp
 import os
 import scipy
 from scipy.sparse import csr_matrix
-from pycce.find_clusters import find_subclusters
+from pycce.find_clusters import find_subclusters_cpu
 from pycce.logging import get_logger
 
 logger = get_logger(__file__)
@@ -197,7 +197,7 @@ if __name__ == "__main__":
     labels = np.zeros(nvertices, dtype=np.int32)
     n_components = 1
 
-    b1 = benchmark(find_subclusters, (3, graph, labels, n_components, False), n_repeat=10)
+    b1 = benchmark(find_subclusters_cpu, (3, graph, labels, n_components, False), n_repeat=10)
     logger.info(b1)
     b2 = benchmark(find_subclusters_gpu, (3, graph, labels, n_components, False), n_repeat=10)
     logger.info(b2)

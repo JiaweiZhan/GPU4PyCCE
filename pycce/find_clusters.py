@@ -5,6 +5,7 @@ import numpy as np
 import scipy.sparse
 import scipy.sparse.csgraph
 from scipy.sparse import csr_matrix
+from pycce.utilities import is_gpu_supported
 
 
 class _Clusters(MutableMapping):
@@ -138,6 +139,16 @@ def connected_components(csgraph, directed=False, connection='weak', return_labe
 
 
 def find_subclusters(maximum_order, graph, labels, n_components, strong=False):
+    clusters = None
+    if is_gpu_supported():
+        from pycce.cuda_code.cluster.find_subclusters import find_subclusters_gpu
+        clusters = find_subclusters_gpu(maximum_order, graph, labels, n_components, strong)
+    else:
+        clusters = find_subclusters_cpu(maximum_order, graph, labels, n_components, strong)
+    return clusters
+
+
+def find_subclusters_cpu(maximum_order, graph, labels, n_components, strong=False):
     """
     Find subclusters from connectivity matrix.
 
