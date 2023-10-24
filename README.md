@@ -8,7 +8,7 @@ in the central spin model with cluster-correlation expansion (CCE) method.
 - Run 
 `python setup.py install`
 in the main folder.
-- Pull submodule (`libcudaqc`)[https://github.com/JiaweiZhan/libcudaqc] by:
+- Pull submodule [`libcudaqc`](https://github.com/JiaweiZhan/libcudaqc) by:
 ```bash
 cd ./libcudaqc
 git submodule update --init --recursive
