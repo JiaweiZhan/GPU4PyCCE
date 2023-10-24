@@ -1,0 +1,3 @@
+[submodule "libcudaqc"]
+	path = libcudaqc
+	url = git@github.com:JiaweiZhan/libcudaqc.git
