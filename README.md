@@ -5,9 +5,14 @@ Welcome to the repository, containing source code of **PyCCE** - a Python librar
 in the central spin model with cluster-correlation expansion (CCE) method.
 
 ### Installation
-Run 
+- Run 
 `python setup.py install`
 in the main folder.
+- Pull submodule (`libcudaqc`)[https://github.com/JiaweiZhan/libcudaqc] by:
+```bash
+cd ./libcudaqc
+git submodule update --init --recursive
+```
 
 ### Base Units
 
@@ -27,10 +32,3 @@ See `examples` folder for tutorials and scripts of calculations.
 ### Documentation
 
 Full documentation is available online at [Read the Docs](https://pycce.readthedocs.io/en/latest/). 
-
-### GPU Performance Track
-
-1 Tesla V100:
-|   GPU-Support    |                         Performance                           | 
-|       :---       |                            :----:                             |
-| find_subclusters | x100 SpeedUp (~3,000 bonds); x1,000 SpeedUp (~15,000 bonds)   |
