@@ -5,7 +5,7 @@ import numpy as np
 import scipy.sparse
 import scipy.sparse.csgraph
 from scipy.sparse import csr_matrix
-from libcudaqc.libcudaqc.src.utils import is_gpu_supported
+from libcudaqc.libcudaqc import is_gpu_supported
 
 
 class _Clusters(MutableMapping):
@@ -141,7 +141,7 @@ def connected_components(csgraph, directed=False, connection='weak', return_labe
 def find_subclusters(maximum_order, graph, labels, n_components, strong=False):
     clusters = None
     if is_gpu_supported():
-        from libcudaqc.libcudaqc.src.k_size_subgraphs.find_subclusters import find_subclusters_gpu
+        from libcudaqc.libcudaqc import find_subclusters_gpu
         clusters = find_subclusters_gpu(maximum_order, graph, labels, n_components, strong)
     else:
         clusters = find_subclusters_cpu(maximum_order, graph, labels, n_components, strong)
