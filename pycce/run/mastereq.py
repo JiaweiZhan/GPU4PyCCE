@@ -12,6 +12,7 @@ from pycce.run.cce import CCE, _rotmul, _gen_key
 from pycce.sm import _smc
 
 import torch
+torch.set_grad_enabled(False)
 torch.set_num_threads(1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

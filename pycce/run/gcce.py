@@ -7,6 +7,7 @@ from pycce.run.base import RunObject, generate_initial_state, simple_propagator
 from pycce.utilities import shorten_dimensions, outer
 
 import torch
+torch.set_grad_enabled(False)
 torch.set_num_threads(1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
