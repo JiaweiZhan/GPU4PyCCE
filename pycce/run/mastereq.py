@@ -61,9 +61,9 @@ def collapse_superoperator(superoperators, index, dims):
     full_lindb = 0
     eye = torch.eye(dims.prod(), dtype=torch.complex128, device=device)
     for key in superoperators:
-        collapse = _process_key_operator(key, superoperators[key], sm)
+        collapse = torch.from_numpy(_process_key_operator(key, superoperators[key], sm)).to(device)
 
-        cn = torch.from_numpy(expand(collapse, index, dims)).to(device)
+        cn = expand_gpu(collapse, index, dims)
         cn_rho_cndag = op_to_supop(cn, cn.conj().T)
         rho_cndag_cn = op_to_supop(eye, cn.conj().T @ cn)
         cndag_cn_rho = op_to_supop(cn.conj().T @ cn, eye)
@@ -71,6 +71,26 @@ def collapse_superoperator(superoperators, index, dims):
         full_lindb += lindb
 
     return full_lindb
+
+def expand_gpu(matrix_g, i, dim):
+    """
+    Expand matrix M from it's own dimensions to the total Hilbert space.
+
+    Args:
+        matrix (ndarray with shape (dim[i], dim[i])): Inital matrix.
+        i (int): Index of the spin dimensions in ``dim`` parameter.
+        dim (ndarray): Array pf dimensions of all spins present in the cluster.
+
+    Returns:
+        ndarray with shape (prod(dim), prod(dim)): Expanded matrix.
+    """
+    dbefore = dim[:i].prod()
+    dafter = dim[i + 1:].prod()
+
+    expanded_matrix = torch.kron(torch.kron(torch.eye(dbefore, dtype=torch.complex128, device=device), matrix_g),
+                              torch.eye(dafter, dtype=torch.complex128, device=device))
+
+    return expanded_matrix
 
 
 
@@ -173,8 +193,7 @@ def op_to_supop(left_operator, right_operator):
     Returns:
         ndarray with shape (n*n,n*n): Resulting Liouvillian superoperator.
     """
-    right_operator_T = right_operator.T.contiguous()
-    return torch.kron(left_operator, right_operator_T)
+    return torch.kron(left_operator, right_operator.T.contiguous())
 
 
 class LindbladgCCE(gCCE):
@@ -406,22 +425,26 @@ class LindbladgCCE(gCCE):
         initial_state = torch.from_numpy(mat_to_vec(initial_state)).to(device)
         non_unitary_evolution = self.super_propagator()
 
-        result = (non_unitary_evolution @ initial_state).cpu().numpy()
-        result = vec_to_mat(result)
+        return np.zeros(non_unitary_evolution.shape[0])
+        result = non_unitary_evolution @ initial_state
+        side = np.sqrt(result.shape[-1])
+        if not int(side) == side:
+            raise ValueError('Unsupported vector shape')
+        result = result.reshape(*result.shape[:-1], int(side), int(side))
 
         if self.store_states:
-            self.cluster_evolved_states = result.copy()
+            self.cluster_evolved_states = result.cpu().numpy().copy()
 
         initial_shape = result.shape
-        result.shape = (initial_shape[0], *dimensions, *dimensions)
+        result = result.reshape(initial_shape[0], *dimensions, *dimensions)
 
         for d in range(len(dimensions) + 1, 2, -1):  # The last one is el spin
-            result = np.trace(result, axis1=1, axis2=d)
+            result = torch.diagonal(result, dim1=1, dim2=d).sum(dim=-1)
 
             if result.shape[1:] == self.dm0.shape:  # break if shape is the same
                 break
 
-        result = self.process_dm(result)
+        result = self.process_dm(result).cpu().numpy()
 
         return result / self.zero_cluster
 

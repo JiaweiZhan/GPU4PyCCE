@@ -130,8 +130,8 @@ class gCCE(RunObject):
 
                     self.normalization = rotation @ self.normalization @ rotation.T.conj()
 
-        self.alpha = alpha
-        self.beta = beta
+        self.alpha = torch.from_numpy(alpha).to(device)
+        self.beta = torch.from_numpy(alpha).to(device)
         self.zero_cluster = 1  # For compute result to work
 
         self.zero_cluster = self.compute_result()
@@ -139,7 +139,7 @@ class gCCE(RunObject):
         if self.fulldm:
             self.zero_cluster = ma.array(self.zero_cluster, mask=np.isclose(self.zero_cluster, 0), fill_value=0j)
         elif self.normalized:
-            self.normalization = self.process_dm(self.normalization)
+            self.normalization = self.process_dm(torch.from_numpy(self.normalization).to(device)).cpu().numpy()
 
         # else:
         #     density_matrix = self.center.eigenvectors.conj().T @ density_matrix @ self.center.eigenvectors
