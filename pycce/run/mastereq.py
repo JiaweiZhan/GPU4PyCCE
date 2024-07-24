@@ -11,6 +11,10 @@ from pycce.run.cce import CCE, _rotmul, _gen_key
 
 from pycce.sm import _smc
 
+import torch
+torch.set_num_threads(1)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 def simple_incoherent_propagator(timespace, lindbladian):
     r"""
@@ -25,7 +29,7 @@ def simple_incoherent_propagator(timespace, lindbladian):
         ndarray with shape (n, N, N): Master equation propagators, evaluated at each timepoint. Use with vector form
             of density matrix.
     """
-    return scipy.linalg.expm(timespace[:, np.newaxis, np.newaxis] * lindbladian[np.newaxis, :] * PI2)
+    return torch.linalg.matrix_exp(timespace[:, np.newaxis, np.newaxis] * lindbladian[np.newaxis, :] * PI2)
 
     # This is how I did it for coherent operator, doesn't work with non-Hermitian L
     # evalues, evec = np.linalg.eig(lindbladian * PI2)
@@ -54,11 +58,11 @@ def collapse_superoperator(superoperators, index, dims):
     """
     sm = _smc[(dims[index] - 1) / 2]
     full_lindb = 0
-    eye = np.eye(dims.prod(), dtype=np.complex128)
+    eye = torch.eye(dims.prod(), dtype=torch.complex128, device=device)
     for key in superoperators:
         collapse = _process_key_operator(key, superoperators[key], sm)
 
-        cn = expand(collapse, index, dims)
+        cn = torch.from_numpy(expand(collapse, index, dims)).to(device)
         cn_rho_cndag = op_to_supop(cn, cn.conj().T)
         rho_cndag_cn = op_to_supop(eye, cn.conj().T @ cn)
         cndag_cn_rho = op_to_supop(cn.conj().T @ cn, eye)
@@ -102,8 +106,9 @@ def coherent_superoperator(hamiltonian):
     Returns:
         ndarray with shape (N*N, N*N): Superoperator corresponding to the coherent evolution of the cluster.
     """
-    eye = np.eye(hamiltonian.shape[0], dtype=np.complex128)
-    return -1j * (op_to_supop(hamiltonian, eye) - op_to_supop(eye, hamiltonian))
+    eye = torch.eye(hamiltonian.shape[0], dtype=torch.complex128, device=device)
+    hamiltonian_gpu = torch.from_numpy(hamiltonian).to(device)
+    return -1j * (op_to_supop(hamiltonian_gpu, eye) - op_to_supop(eye, hamiltonian_gpu))
 
 
 def projected_coherent_superoperator(hamiltonian0, hamiltonian1):
@@ -167,7 +172,8 @@ def op_to_supop(left_operator, right_operator):
     Returns:
         ndarray with shape (n*n,n*n): Resulting Liouvillian superoperator.
     """
-    return np.kron(left_operator, right_operator.T)
+    right_operator_T = right_operator.T.contiguous()
+    return torch.kron(left_operator, right_operator_T)
 
 
 class LindbladgCCE(gCCE):
@@ -258,10 +264,16 @@ class LindbladgCCE(gCCE):
             ndarray with shape (n*n,n*n): matrix representation of the propagation superoperator.
         """
         delays = self.timespace if self.as_delay else self.timespace / (2 * len(self.pulses))
-        rotations = [op_to_supop(rot, rot.conj().T) if rot is not None else None for rot in self.rotations]
+        rotations = []
+        for rot in self.rotations:
+            if rot is not None:
+                rot = torch.from_numpy(rot).to(device)
+                rotations.append(op_to_supop(rot, rot.conj().T))
+            else:
+                rotations.append(None)
 
         # Same propagator for all parts
-        u = simple_incoherent_propagator(delays, self.superoperator)
+        u = simple_incoherent_propagator(torch.from_numpy(delays).to(device), self.superoperator)
 
         return rotation_propagator(u, rotations)
 
@@ -390,10 +402,10 @@ class LindbladgCCE(gCCE):
         if initial_state.ndim == 1:
             initial_state = outer(initial_state, initial_state)
 
-        initial_state = mat_to_vec(initial_state)
+        initial_state = torch.from_numpy(mat_to_vec(initial_state)).to(device)
         non_unitary_evolution = self.super_propagator()
 
-        result = non_unitary_evolution @ initial_state
+        result = (non_unitary_evolution @ initial_state).cpu().numpy()
         result = vec_to_mat(result)
 
         if self.store_states:

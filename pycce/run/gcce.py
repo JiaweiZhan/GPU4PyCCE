@@ -6,6 +6,9 @@ from pycce.h import total_hamiltonian
 from pycce.run.base import RunObject, generate_initial_state, simple_propagator
 from pycce.utilities import shorten_dimensions, outer
 
+import torch
+torch.set_num_threads(1)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def rotation_propagator(u, rotations):
     """
@@ -24,15 +27,15 @@ def rotation_propagator(u, rotations):
         ndarray with shape (n, N, N): Full propagator.
 
     """
-    full_u = np.eye(u.shape[1], dtype=np.complex128)
+    full_u = torch.eye(u.shape[1], dtype=torch.complex128, device=device)
 
     for rotation in rotations:
-        full_u = np.matmul(u, full_u)
+        full_u = torch.matmul(u, full_u)
 
         if rotation is not None:
-            full_u = np.matmul(rotation, full_u)
+            full_u = torch.matmul(rotation, full_u)
 
-        full_u = np.matmul(u, full_u)
+        full_u = torch.matmul(u, full_u)
 
     return full_u
 
