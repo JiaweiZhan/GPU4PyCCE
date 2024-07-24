@@ -30,7 +30,7 @@ def simple_incoherent_propagator(timespace, lindbladian):
         ndarray with shape (n, N, N): Master equation propagators, evaluated at each timepoint. Use with vector form
             of density matrix.
     """
-    return torch.linalg.matrix_exp(timespace[:, np.newaxis, np.newaxis] * lindbladian[np.newaxis, :] * PI2)
+    return torch.linalg.matrix_exp(timespace[:, None, None] * lindbladian[None, :, :] * PI2)
 
     # This is how I did it for coherent operator, doesn't work with non-Hermitian L
     # evalues, evec = np.linalg.eig(lindbladian * PI2)
@@ -292,7 +292,7 @@ class LindbladgCCE(gCCE):
             else:
                 rotations.append(None)
 
-        # Same propagator for all parts
+        # # Same propagator for all parts
         u = simple_incoherent_propagator(torch.from_numpy(delays).to(device), self.superoperator)
 
         return rotation_propagator(u, rotations)
@@ -425,7 +425,6 @@ class LindbladgCCE(gCCE):
         initial_state = torch.from_numpy(mat_to_vec(initial_state)).to(device)
         non_unitary_evolution = self.super_propagator()
 
-        return np.zeros(non_unitary_evolution.shape[0])
         result = non_unitary_evolution @ initial_state
         side = np.sqrt(result.shape[-1])
         if not int(side) == side:
