@@ -11,6 +11,25 @@ from pycce.run.cce import CCE, _rotmul, _gen_key
 
 from pycce.sm import _smc
 
+import torch
+torch.set_num_threads(1)
+torch.set_grad_enabled(False)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def simple_incoherent_propagator_gpu(timespace, lindbladian):
+    r"""
+    Generate a simple superpropagator :math:`U=\exp[ \mathcal{L}]` from the Lindbladian superoperator.
+
+    Args:
+
+        timespace (ndarray with shape (n, )): Time points at which to evaluate the propagator.
+        lindbladian (ndarray with shape (n, N, N)): Lindbladian superoperator of the system in matrix form.
+
+    Returns:
+        ndarray with shape (n, N, N): Master equation propagators, evaluated at each timepoint. Use with vector form
+            of density matrix.
+    """
+    return torch.matrix_exp(timespace[:, None, None] * lindbladian[None, :, :] * PI2)
 
 def simple_incoherent_propagator(timespace, lindbladian):
     r"""
@@ -412,6 +431,38 @@ class LindbladgCCE(gCCE):
 
         return result / self.zero_cluster
 
+def propagate_superpropagators_gpu(u_before_pi, u_after_pi, number):
+    r"""
+    Compute propagator superoperator, assuming a number of :math:`\pi`-pulses is applied to the central spin
+    with equal distances.
+    Args:
+        u_before_pi (ndarray with shape (n*n,n*n)): Superoperator representation of the propagator for the cluster
+            before :math:`\pi`-pulse is applied.
+        u_after_pi (ndarray with shape (n*n,n*n)): Superoperator representation of the propagator for the cluster
+            after :math:`\pi`-pulse is applied.
+        number (int): Number of applied :math:`\pi`-pulses in the CPMG sequence.
+
+    Returns:
+        ndarray with shape (n*n,n*n): Superoperator representation of the propagator including all :math:`\pi`-pulses.
+    """
+    v_he = torch.matmul(u_after_pi, u_before_pi)
+
+    if number == 1:
+        return v_he
+
+    v_he_reversed = torch.matmul(u_before_pi, u_after_pi)
+    v_cp = torch.matmul(v_he_reversed, v_he)  # v0 @ v1 @ v1 @ v0
+
+    if number == 2:
+        return v_cp
+
+    nonunitary = torch.linalg.matrix_power(v_cp, number // 2)
+
+    if number % 2 == 1:
+        nonunitary = torch.matmul(v_he, nonunitary)
+
+    return nonunitary
+
 
 def propagate_superpropagators(u_before_pi, u_after_pi, number):
     r"""
@@ -518,13 +569,16 @@ class LindbladCCE(CCE):
 
     def _no_pulses_super(self):
         delays = self.timespace / (2 * self.pulses) if ((not self.as_delay) and self.pulses) else self.timespace
+        delays = torch.from_numpy(delays).to(device)
         if not self.pulses:
             u = simple_incoherent_propagator(delays, self.superoperator)
             return u
 
         i1, i2 = self.get_superoperator(return_two=True)
-        u0, u1 = (simple_incoherent_propagator(delays, isup) for isup in (i1, i2))
-        return propagate_superpropagators(u0, u1, self.pulses)
+        i1 = torch.from_numpy(i1).to(device)
+        i2 = torch.from_numpy(i2).to(device)
+        u0, u1 = (simple_incoherent_propagator_gpu(delays, isup) for isup in (i1, i2))
+        return propagate_superpropagators_gpu(u0, u1, self.pulses)
 
     def _no_delays_super(self):
         delays = self.timespace if self.as_delay else self.timespace / (2 * len(self.pulses))
@@ -639,9 +693,11 @@ class LindbladCCE(CCE):
 
         initial_state = mat_to_vec(initial_state)
         non_unitary_evolution = self.super_propagator()
+        initial_state = torch.from_numpy(initial_state).to(non_unitary_evolution.device).to(non_unitary_evolution.dtype)
 
         result = non_unitary_evolution @ initial_state
         result = vec_to_mat(result)
+        result = result.cpu().numpy()
 
         if self.store_states:
             self.cluster_evolved_states = result.copy()
