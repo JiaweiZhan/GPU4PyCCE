@@ -4,6 +4,7 @@ This module contains information about the way the cluster expansion is implemen
 import functools
 import operator
 import warnings
+from tqdm import tqdm
 
 import numpy as np
 from pycce.sm import _smc
@@ -129,6 +130,7 @@ def optimized_approach(function, self, *arg,
     # Number of visited orders from highest to lowest
     visited = 0
     for order in revorders:
+        print(f"{order} in {revorders}")
         nclusters = subclusters[order].shape[0]
         current_power = np.ones(nclusters, dtype=np.int32)
         # indexes of the cluster of size order are stored in v
@@ -142,7 +144,7 @@ def optimized_approach(function, self, *arg,
             start = 0
             block = nclusters
 
-        for index in range(start, start + block):
+        for index in tqdm(range(start, start + block)):
 
             v = subclusters[order][index]
             # First, find the correct power. Iterate over all higher orders
