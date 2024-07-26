@@ -10,6 +10,10 @@ from pycce.run.pulses import Sequence
 from pycce.sm import numba_gen_sm
 from pycce.utilities import expand, outer, shorten_dimensions, gen_state_list
 
+import torch
+torch.set_num_threads(1)
+torch.set_grad_enabled(False)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class RunObject:
     r"""
@@ -636,10 +640,10 @@ class RunObject:
                                                 self.bath.proj)
                 # addition = zero_order_addition(self.base_hamiltonian.vectors, self.cluster, self.others,
                 #                                self.others.proj)
-                self.hamiltonian = self.base_hamiltonian.data + addition
+                self.hamiltonian = torch.from_numpy(self.base_hamiltonian.data + addition).to(device)
 
             else:
-                self.hamiltonian = self.base_hamiltonian.data
+                self.hamiltonian = torch.from_numpy(self.base_hamiltonian.data).to(device)
 
     def get_hamiltonian_variable_bath_state(self, index=0):
         """
