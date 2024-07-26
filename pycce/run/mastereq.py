@@ -15,6 +15,8 @@ import torch
 torch.set_num_threads(1)
 torch.set_grad_enabled(False)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+default_complex_dtype = torch.complex64
+default_real_dtype = torch.float32
 
 def expand(matrix, i, dim):
     """
@@ -31,8 +33,8 @@ def expand(matrix, i, dim):
     dbefore = dim[:i].prod()
     dafter = dim[i + 1:].prod()
 
-    expanded_matrix = torch.kron(torch.kron(torch.eye(dbefore, dtype=torch.complex128, device=matrix.device), matrix),
-                            torch.eye(dafter, dtype=torch.complex128, device=matrix.device))
+    expanded_matrix = torch.kron(torch.kron(torch.eye(dbefore, dtype=matrix.dtype, device=matrix.device), matrix),
+                            torch.eye(dafter, dtype=matrix.dtype, device=matrix.device))
 
     return expanded_matrix
 
@@ -69,9 +71,9 @@ def collapse_superoperator(superoperators, index, dims):
     """
     sm = _smc[(dims[index] - 1) / 2]
     full_lindb = 0
-    eye = torch.eye(dims.prod(), dtype=torch.complex128, device=device)
+    eye = torch.eye(dims.prod(), dtype=default_complex_dtype, device=device)
     for key in superoperators:
-        collapse = torch.from_numpy(_process_key_operator(key, superoperators[key], sm)).to(device).contiguous()
+        collapse = torch.from_numpy(_process_key_operator(key, superoperators[key], sm)).to(device).to(default_complex_dtype).contiguous()
 
         cn = expand(collapse, index, dims)
         cn_rho_cndag = op_to_supop(cn, cn.conj().T)
@@ -117,7 +119,7 @@ def coherent_superoperator(hamiltonian):
     Returns:
         ndarray with shape (N*N, N*N): Superoperator corresponding to the coherent evolution of the cluster.
     """
-    eye = torch.eye(hamiltonian.shape[0], dtype=torch.complex128, device=hamiltonian.device)
+    eye = torch.eye(hamiltonian.shape[0], dtype=hamiltonian.dtype, device=hamiltonian.device)
     return -1j * (op_to_supop(hamiltonian, eye) - op_to_supop(eye, hamiltonian))
 
 
@@ -133,7 +135,7 @@ def projected_coherent_superoperator(hamiltonian0, hamiltonian1):
     Returns:
         ndarray with shape (N*N, N*N): Superoperator corresponding to the coherent evolution of the cluster.
     """
-    eye = torch.eye(hamiltonian0.shape[0], dtype=torch.complex128, device=hamiltonian0.device)
+    eye = torch.eye(hamiltonian0.shape[0], dtype=hamiltonian0.dtype, device=hamiltonian0.device)
     return -1j * (op_to_supop(hamiltonian0, eye) - op_to_supop(eye, hamiltonian1))
 
 
@@ -479,7 +481,7 @@ class LindbladCCE(CCE):
         super().__init__(*args, **kwargs)
 
     def preprocess(self):
-        self.timespace = torch.from_numpy(self.timespace).to(device)
+        self.timespace = torch.from_numpy(self.timespace).to(device).to(default_real_dtype)
         super().preprocess()
 
     def postprocess(self):
@@ -508,8 +510,8 @@ class LindbladCCE(CCE):
 
         ha_a = projected_addition(self.base_hamiltonian.vectors, self.cluster, self.center, alpha)
         hb_a = projected_addition(self.base_hamiltonian.vectors, self.cluster, self.center, beta)
-        ha_a = torch.from_numpy(ha_a).to(device)
-        hb_a = torch.from_numpy(hb_a).to(device)
+        ha_a = torch.from_numpy(ha_a).to(device).to(self.hamiltonian.dtype)
+        hb_a = torch.from_numpy(hb_a).to(device).to(self.hamiltonian.dtype)
 
         ha = self.hamiltonian + ha_a
         hb = self.hamiltonian + hb_a
@@ -655,8 +657,8 @@ class LindbladCCE(CCE):
             initial_state = outer(initial_state, initial_state)
 
         initial_state = mat_to_vec(initial_state)
-        initial_state = torch.from_numpy(initial_state).to(device).to(torch.complex128)
         non_unitary_evolution = self.super_propagator()
+        initial_state = torch.from_numpy(initial_state).to(device).to(non_unitary_evolution.dtype)
 
         result = non_unitary_evolution @ initial_state
         result = vec_to_mat(result)
