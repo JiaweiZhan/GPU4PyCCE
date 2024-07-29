@@ -5,7 +5,7 @@ from collections.abc import Mapping
 
 import numpy as np
 from numpy.lib.recfunctions import repack_fields
-from pycce.bath.map import InteractionMap
+from pycce.bath.map import InteractionMap, LindbladianMap
 from pycce.bath.state import BathState
 from pycce.constants import HBAR_MU0_O4PI, ELECTRON_GYRO, HBAR_SI, NUCLEAR_MAGNETON, PI2
 from pycce.utilities import gen_state_list, vector_from_s, rotate_coordinates, rotate_tensor, _add_args
@@ -150,7 +150,7 @@ class BathArray(np.ndarray):
 
     def __new__(subtype, shape=None, array=None,
                 names=None, hyperfines=None, quadrupoles=None,
-                types=None, imap=None,
+                types=None, imap=None, linmap=None,
                 ca=None, sn=None, hf=None, q=None, efg=None, state=None,
                 center=1):
         # Create the ndarray instance of our type, given the usual
@@ -201,7 +201,7 @@ class BathArray(np.ndarray):
 
         obj.types = SpinDict()
         obj.imap = imap
-
+        obj.linmap = linmap
         obj._state = BathState(obj.size)
 
         if state is not None:
@@ -266,6 +266,8 @@ class BathArray(np.ndarray):
 
         self.types = getattr(obj, 'types', None)
         self.imap = getattr(obj, 'imap', None)
+        self.linmap = getattr(obj, 'linmap', None)
+
         self._state = getattr(obj, '_state', None)
         # We do not need to return anything
 
@@ -289,7 +291,7 @@ class BathArray(np.ndarray):
         """
         Sort array in-place. Is implemented only when imap is None. Otherwise use ``np.sort``.
         """
-        if self.imap is None:
+        if self.imap is None and self.linmap is None:
             super().sort(axis=axis, kind=kind, order=order)
         else:
             raise NotImplementedError('Inplace sort is implemented only when .imap is None')
@@ -552,18 +554,28 @@ class BathArray(np.ndarray):
         else:
 
             obj = np.ndarray.__getitem__(self, item)
+            obj.imap = None
+            obj.linmap = None
 
             try:
                 obj._state = self._state._get_state(item)
 
                 if self.imap is not None:
                     if not isinstance(item, tuple):
-
                         if isinstance(item, slice):
                             item = np.arange(self.size)[item]
                         smap = self.imap.subspace(item)
                         if smap:
                             obj.imap = smap
+
+                if self.linmap is not None:
+                    if not isinstance(item, tuple):
+                        if isinstance(item, slice):
+                            item = np.arange(self.size)[item]
+                        slap = self.linmap.subspace(item)
+                        if slap:
+                            obj.linmap = slap
+
 
             except AttributeError:
                 pass
@@ -658,6 +670,14 @@ class BathArray(np.ndarray):
             # self.imap[i, j] = tensor
         else:
             self.imap[i, j] = tensor
+
+    def add_dissipator(self, indexes, dissipator):
+
+        if self.linmap is None:
+            self.linmap = LindbladianMap()
+            self.linmap[tuple(indexes)] = dissipator
+        else:
+            self.linmap[tuple(indexes)] = dissipator
 
     def add_single_jump(self, operator, rate=1, units='rad', square_root=False, which=None):
         """
@@ -1011,6 +1031,7 @@ class BathArray(np.ndarray):
     def expand(self, ncenters):
 
         array = BathArray(array=self.xyz, quadrupoles=self.Q, names=self.N, center=ncenters, imap=self.imap,
+                          linmap=self.linmap,
                           types=self.types, state=self.state)
 
         hyperfine = self.A
@@ -1069,6 +1090,9 @@ def delete(arr, obj, axis=None):
     if arr.imap:
         newarr.imap = arr.imap.subspace(obj)
 
+    if arr.linmap:
+        newarr.linmap = arr.linmap.subspace(obj)
+
     newarr.state = np.delete(arr.state[...], obj, axis=axis)
     return newarr
 
@@ -1092,7 +1116,7 @@ def concatenate(arrays, axis=0, out=None):
     new_array = new_array.view(BathArray)
     types = SpinDict()
     imap = InteractionMap()
-
+    linmap = LindbladianMap()
     offset = 0
     state = BathState(new_array.size)
 
@@ -1101,7 +1125,8 @@ def concatenate(arrays, axis=0, out=None):
 
         if x.imap:
             imap += x.imap.shift(offset, inplace=False)
-
+        if x.linmap:
+            linmap += x.linmap.shift(offset, inplace=False)
         state[offset:offset + x.size] = x.state
         offset += x.size
 
@@ -1110,7 +1135,8 @@ def concatenate(arrays, axis=0, out=None):
 
     if imap:
         new_array.imap = imap
-
+    if linmap:
+        new_array.linmap = linmap
     return new_array
 
 
@@ -1861,46 +1887,8 @@ def _check_key_spintype(k, v):
     return v
 
 
-def _process_key_operator(key, rate, sm):
-    r"""
-    Process key of the .so or .h dictionaries of the SpinType
-    Args:
-        key (str or int): key of the dictionary. Can be either of the following:
-
-            * Pair of integers defining the Sven operator.
-            * String where each symbol corresponds to the spin matrix or operation between them.
-              Allowed symbols: ``xyz+``. If there is nothing between symbols, assume multiplication of the operators.
-              If there is a ``+`` symbol, assume summation between terms. For example, ``xx+z`` would correspond to
-              the operator :math:`\hat S_x \hat S_x + \hat S_z`.
-            * String equal to ``A``. Then assumes that the correct matrix form of the operator has been provided
-              by the user.
-
-
-        rate (float or ndarray with shape (n,n): value stored in the dictionary.
-        sm (SpinMatrix): Object containing spin matrices of the given spin.
-
-    Returns:
-        ndarray with shape (n,n): Resulting operator.
-    """
-    if isinstance(key, str):
-        if key.lower() == 'a':
-            return rate
-
-        separated = key.split('+')
-        operator = 0
-        for k in separated:
-            current = None
-            for sym in k:
-                current = getattr(sm, sym) if current is None else np.matmul(current, getattr(sm, sym))
-            operator = operator + current
-
-        operator = operator * rate
-    else:
-        operator = sm.stev(*key) * rate
-
-    return operator
-
 _spin_not_found_message = lambda x: 'Spin type for {} was not provided and was not found in common isotopes.'.format(x)
+
 
 import pandas as pd
 
