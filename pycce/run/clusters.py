@@ -109,13 +109,12 @@ def optimized_approach(function, self, *arg,
             warnings.warn('Parallel failed: mpi4py is not found. Running serial.')
             self.parallel = False
 
+    rank, size = 0, 1
     if self.parallel:
         comm = MPI.COMM_WORLD
 
         size = comm.Get_size()
         rank = comm.Get_rank()
-    else:
-        rank = 0
 
     # If there is only one set of indexes for only one order,
     # Then for this subcluster nelements < maximum CCE order
@@ -130,8 +129,6 @@ def optimized_approach(function, self, *arg,
     # Number of visited orders from highest to lowest
     visited = 0
     for order in revorders:
-        if self.verbose:
-            print(f"order={order} out of {revorders}")
         nclusters = subclusters[order].shape[0]
         current_power = np.ones(nclusters, dtype=np.int32)
         # indexes of the cluster of size order are stored in v
@@ -145,7 +142,10 @@ def optimized_approach(function, self, *arg,
             start = 0
             block = nclusters
 
-        for index in tqdm(range(start, start + block), disable=not self.verbose):
+        if rank == 0:
+            n_current = 0
+            pbar = tqdm(total=nclusters, disable=not self.verbose, desc=f"order={order}", position=0, leave=True)
+        for index in range(start, start + block):
 
             v = subclusters[order][index]
             # First, find the correct power. Iterate over all higher orders
@@ -175,6 +175,12 @@ def optimized_approach(function, self, *arg,
                 vcalc = contribution_operator(vcalc, current_power[index])
 
             result = result_operator(result, vcalc)
+
+            # update pbar
+            if rank == 0:
+                step = min(size, nclusters - n_current)
+                pbar.update(step)
+                n_current += step
 
         if self.parallel:
             buffer = np.empty(current_power.shape, dtype=np.int32)
