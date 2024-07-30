@@ -365,9 +365,11 @@ class Simulator:
 
     def __init__(self, spin, position=None, alpha=None, beta=None, gyro=None, magnetic_field=None,
                  D=None, E=0., r_dipole=None, order=None, bath=None, pulses=None, as_delay=False, n_clusters=None,
+                 verbose=False,
                  **bath_kw):
 
         self.center = None
+        self.verbose = verbose
         """CenterArray: Array of central spins."""
         if isinstance(spin, CenterArray):
             self.center = spin
