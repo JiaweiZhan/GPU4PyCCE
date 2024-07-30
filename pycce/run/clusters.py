@@ -4,6 +4,7 @@ This module contains information about the way the cluster expansion is implemen
 import functools
 import operator
 import warnings
+from tqdm import tqdm
 
 import numpy as np
 from pycce.sm import _smc
@@ -108,13 +109,12 @@ def optimized_approach(function, self, *arg,
             warnings.warn('Parallel failed: mpi4py is not found. Running serial.')
             self.parallel = False
 
+    rank, size = 0, 1
     if self.parallel:
         comm = MPI.COMM_WORLD
 
         size = comm.Get_size()
         rank = comm.Get_rank()
-    else:
-        rank = 0
 
     # If there is only one set of indexes for only one order,
     # Then for this subcluster nelements < maximum CCE order
@@ -141,6 +141,10 @@ def optimized_approach(function, self, *arg,
         else:
             start = 0
             block = nclusters
+
+        if rank == 0:
+            n_current = 0
+            pbar = tqdm(total=nclusters, desc=f"order: {order}", disable=not self.verbose)
 
         for index in range(start, start + block):
 
@@ -172,6 +176,10 @@ def optimized_approach(function, self, *arg,
                 vcalc = contribution_operator(vcalc, current_power[index])
 
             result = result_operator(result, vcalc)
+            if rank == 0:
+                step = min(size, nclusters - n_current)
+                pbar.update(step)
+                n_current += step
 
         if self.parallel:
             buffer = np.empty(current_power.shape, dtype=np.int32)
