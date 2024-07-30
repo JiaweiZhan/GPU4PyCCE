@@ -993,6 +993,8 @@ class Simulator:
         return self.bath
 
     def to(self, device):
+        if self.verbose:
+            print(f'Set device from {self.device} to {device}')
         self.device = device
 
     @_add_args(_args + _returns)
@@ -1262,6 +1264,7 @@ def _broadcast_simulator(simulator=None, root=0):
 
     # size = comm.Get_size()
     rank = comm.Get_rank()
+    local_device = simulator.device
 
     if rank == root:
         bath = simulator.bath
@@ -1295,4 +1298,5 @@ def _broadcast_simulator(simulator=None, root=0):
 
     nsim.center = ncenter
     nsim._bath = nbath
+    nsim.device = local_device
     return nsim
