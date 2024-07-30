@@ -587,7 +587,10 @@ class RunObject:
             delays = None
 
         else:
-            delays = [p.delay if p.delay is not None else 0 for p in self.pulses]
+            delays = [torch.from_numpy(p.delay).to(self.device)
+                if p.delay is not None
+                else torch.tensor(0, device=self.device)
+                for p in self.pulses]
 
         rots = []
         # Sigma as if central spin array is total spin. Sigma - pauli matrix
@@ -627,6 +630,8 @@ class RunObject:
 
             p.rotation = rotation
 
+            if isinstance(rotation, np.ndarray):
+                rotation = torch.from_numpy(rotation).to(self.device)
             rots.append(rotation)
 
         self.delays = delays

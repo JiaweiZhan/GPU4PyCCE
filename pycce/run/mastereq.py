@@ -8,12 +8,20 @@ from pycce.h import total_hamiltonian, projected_addition
 from pycce.run.base import RunObject, generate_initial_state, simple_propagator
 from pycce.utilities import shorten_dimensions, outer, set_torch
 from pycce.run.gcce import gCCE, rotation_propagator
-from pycce.run.cce import CCE, _rotmul, _gen_key
+from pycce.run.cce import CCE, _gen_key
 
 from pycce.sm import _smc
 
 import torch
 set_torch()
+
+def _rotmul(rotation, u, **kwargs):
+    if rotation is not None and u is not None:
+        u = torch.matmul(rotation, u, **kwargs)
+    elif rotation is not None:
+        u = rotation
+
+    return u
 
 def expand(matrix, i, dim):
     """
@@ -617,11 +625,14 @@ class LindbladCCE(CCE):
     def super_propagator(self):
 
         if not self.use_pulses:
+            print("1")
             return self._no_pulses_super()
 
         if self.delays is None:
+            print("2")
             return self._no_delays_super()
 
+        print("3")
         return self._delays_super()
 
     def _no_pulses_super(self):
@@ -646,10 +657,10 @@ class LindbladCCE(CCE):
 
         v01 = simple_incoherent_propagator(delays, self.superoperator)
         vs = {(tuple(key_alpha), tuple(key_beta)): v01}
-        nonunitary = np.eye(v01.shape[1], dtype=np.complex128)
+        nonunitary = torch.eye(v01.shape[1], dtype=v01.dtype, device=v01.device)
 
         for p, rotation in zip(self.pulses, rotations):
-            nonunitary = np.matmul(v01, nonunitary)
+            nonunitary = torch.matmul(v01, nonunitary)
             nonunitary = _rotmul(rotation, nonunitary)
 
             if p.bath_names is not None:
@@ -667,7 +678,7 @@ class LindbladCCE(CCE):
 
                 vs[(tuple(key_alpha), tuple(key_beta))] = v01
 
-            nonunitary = np.matmul(v01, nonunitary)
+            nonunitary = torch.matmul(v01, nonunitary)
 
         return nonunitary
 
@@ -681,7 +692,7 @@ class LindbladCCE(CCE):
         self.get_superoperator(alpha=key_alpha, beta=key_beta, index=ps_counter)
         rotations = [op_to_supop(rot, rot.conj().T) if rot is not None else None for rot in self.rotations]
 
-        eval01, evec01 = np.linalg.eigh(self.superoperator * PI2)
+        eval01, evec01 = torch.linalg.eigh(self.superoperator * PI2)
 
         # for timesteps, rotation in zip(pulses.delays, pulses.rotations):
         eval_evec = {(tuple(key_alpha), tuple(key_beta)): (eval01, evec01)}
@@ -689,13 +700,13 @@ class LindbladCCE(CCE):
         nonunitary = None
 
         for p, delay, rotation in zip(self.pulses, self.delays, rotations):
-            if np.any(delay):
-                eigen_exp = np.exp(-1j * np.outer(delay, eval01), dtype=np.complex128)
-                u01 = np.matmul(np.einsum('...ij,...j->...ij', evec01, eigen_exp, dtype=np.complex128), evec01.conj().T)
+            if torch.any(delay).item():
+                eigen_exp = torch.exp(-1j * torch.outer(delay, eval01))
+                u01 = torch.matmul(torch.einsum('...ij,...j->...ij', evec01, eigen_exp), evec01.conj().T)
 
                 times += delay
 
-                nonunitary = _rotmul(rotation, u01) if nonunitary is None else np.matmul(u01,
+                nonunitary = _rotmul(rotation, u01) if nonunitary is None else torch.matmul(u01,
                                                                                          _rotmul(rotation, nonunitary))
             else:
                 nonunitary = _rotmul(rotation, nonunitary)
@@ -710,21 +721,23 @@ class LindbladCCE(CCE):
                 eval01, evec01 = eval_evec[(tuple(key_alpha), tuple(key_beta))]
             except KeyError:
                 self.get_superoperator(alpha=key_alpha, beta=key_beta, index=ps_counter)
-                eval01, evec01 = np.linalg.eigh(self.superoperator * PI2)
+                eval01, evec01 = torch.linalg.eigh(self.superoperator * PI2)
 
                 eval_evec[(tuple(key_alpha), tuple(key_beta))] = eval01, evec01
 
-        which = np.isclose(self.timespace, times)
+        if isinstance(times, int):
+            times = torch.tensor(0, device=self.timespace.device, dtype=self.timespace.dtype)
+        which = torch.isclose(self.timespace, times)
         if ((self.timespace - times)[~which] >= 0).all():
 
-            eigen_exp = np.exp(-1j * np.outer(self.timespace - times, eval01), dtype=np.complex128)
-            u01 = np.matmul(np.einsum('...ij,...j->...ij', evec01, eigen_exp, dtype=np.complex128), evec01.conj().T)
+            eigen_exp = torch.exp(-1j * torch.outer(self.timespace - times, eval01))
+            u01 = torch.matmul(torch.einsum('...ij,...j->...ij', evec01, eigen_exp), evec01.conj().T)
 
-            nonunitary = np.matmul(u01, nonunitary)
+            nonunitary = torch.matmul(u01, nonunitary)
 
-        elif not which.all():
+        elif not which.all().item():
             raise ValueError(f"Pulse sequence time steps add up to larger than total times"
-                             f"{np.argwhere((self.timespace - times) < 0)} are longer than total time.")
+                             f"{torch.argwhere((self.timespace - times) < 0)} are longer than total time.")
 
         return nonunitary
 
