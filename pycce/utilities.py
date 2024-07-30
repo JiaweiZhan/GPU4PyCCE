@@ -3,6 +3,11 @@ import warnings
 import numpy as np
 from numba import jit
 from numba.typed import List
+import torch
+
+def set_torch():
+    torch.set_num_threads(1)
+    torch.enable_grad(False)
 
 
 def rotmatrix(initial_vector, final_vector):
