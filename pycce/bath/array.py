@@ -1902,7 +1902,7 @@ import os
 __location__ = os.path.realpath(
     os.path.join(os.getcwd(), os.path.dirname(__file__)))
 filepath = os.path.join(__location__, 'isotopes.txt')
-all_spins = pd.read_csv(filepath, delim_whitespace=True, header=None, comment='%',
+all_spins = pd.read_csv(filepath, header=None, comment='%', sep="\s+",
                         names=['protons', 'nucleons', 'radioactive', 'symbol', 'name', 'spin', 'g', 'conc', 'q'])
 
 # only stable isotopes with nonzero spins
