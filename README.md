@@ -80,10 +80,7 @@ GPU4PyCCE demonstrates substantial performance improvements when utilizing an NV
 | 3                   |    250x    |
 
 ### TODO
-[x] multi-gpu; multi-node
-
-[x] *LindbladCCE* `_no_pulses_super`
-
-[ ] *LindbladCCE* `_no_delays_super`/`_delays_super`
-
-[ ] better data management between CPU and GPU
+- [x] multi-gpu; multi-node
+- [x] *LindbladCCE* `_no_pulses_super`
+- [ ] *LindbladCCE* `_no_delays_super`/`_delays_super`
+- [ ] better data management between CPU and GPU
