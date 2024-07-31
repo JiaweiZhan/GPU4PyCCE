@@ -56,7 +56,7 @@ source ~/.bashrc
 ```
 
 ### GPU Usage
-GPU4PyCCE provides support for GPU acceleration using the `to({device})`` function, allowing calculations to be moved to the desired device(s). You can create a `Simulator` instance as usual and then call `to('cuda')` to enable GPU computation:
+GPU4PyCCE provides support for GPU acceleration using the `to({device})` function, allowing calculations to be moved to the desired device(s). You can create a `Simulator` instance as usual and then call `to('cuda')` to enable GPU computation:
 ```python
 #define simulator object
 calc = pc.Simulator(center, bath=electrons,
