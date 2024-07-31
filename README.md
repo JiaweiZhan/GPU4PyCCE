@@ -10,7 +10,8 @@ Run
 in the main folder.
 
 #### Install on ***Perlmutter with GPU support***
-Please checkout [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh)
+Please checkout [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh) for understanding the dependencies and installation steps.
+
 Run 
 ```bash
 bash install_perlmutter.sh
