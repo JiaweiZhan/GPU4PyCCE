@@ -8,10 +8,9 @@ from pycce.run.clusters import cluster_expansion_decorator, interlaced_decorator
 from pycce.run.mc import monte_carlo_method_decorator
 from pycce.run.pulses import Sequence
 from pycce.sm import numba_gen_sm
-from pycce.utilities import expand, outer, shorten_dimensions, gen_state_list, set_torch
+from pycce.utilities import expand, outer, shorten_dimensions, gen_state_list
 
 import torch
-set_torch()
 
 
 class RunObject:

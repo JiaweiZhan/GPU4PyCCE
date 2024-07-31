@@ -6,14 +6,13 @@ from pycce.bath.map import process_key_operator, process_key_dissipator
 from pycce.constants import PI2
 from pycce.h import total_hamiltonian, projected_addition
 from pycce.run.base import RunObject, generate_initial_state, simple_propagator
-from pycce.utilities import shorten_dimensions, outer, set_torch
+from pycce.utilities import shorten_dimensions, outer
 from pycce.run.gcce import gCCE, rotation_propagator
 from pycce.run.cce import CCE, _gen_key
 
 from pycce.sm import _smc
 
 import torch
-set_torch()
 
 def _rotmul(rotation, u, **kwargs):
     if rotation is not None and u is not None:
@@ -625,14 +624,11 @@ class LindbladCCE(CCE):
     def super_propagator(self):
 
         if not self.use_pulses:
-            print("1")
             return self._no_pulses_super()
 
         if self.delays is None:
-            print("2")
             return self._no_delays_super()
 
-        print("3")
         return self._delays_super()
 
     def _no_pulses_super(self):
