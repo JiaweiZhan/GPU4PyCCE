@@ -29,34 +29,40 @@ See `examples` folder for tutorials and scripts of calculations.
 Full documentation is available online at [Read the Docs](https://pycce.readthedocs.io/en/latest/). 
 
 ## GPU support
-### Install on ***Perlmutter with GPU support***
-Please checkout [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh) for understanding the dependencies and installation steps.
+### Key Features
+- Accelerate the **ME-CCE** method utilizing NVIDIA GPUs.
+- Enable ***multi-GPU*** and ***multi-node*** computations through GPU-aware MPI.
 
-- Run:
+### Installation on ***Perlmutter with GPU Support***
+For detailed dependencies and installation instructions, refer to [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh)
+
+To set up the environment:
+
+1. Execute the installation script::
 ```bash
 bash ./examples/mecce_gpu/install_perlmutter.sh
 ```
-in the main folder to create conda environment `gpu4pycce` and install dependencies.
+This will create the `gpu4pycce` Conda environment and install the necessary dependencies.
 
-- Add the main folder to the `PYTHONPATH` temporarily:
+2. Temporarily add the main directory to PYTHONPATH:
 ```bash
 CURRENT_PATH=`pwd`
 export PYTHONPATH="${PYTHONPATH}:${CURRENT_PATH}"
 ```
-- Or modify the `PYTHONPATH` permanently:
+Alternatively, you can make this change permanent by modifying your `~/.bashrc`:
 ```bash
 echo 'export PYTHONPATH="${PYTHONPATH}:{abs path of the current repo}"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
 ### GPU Usage
-See `examples/mecce_gpu` folder for [a demo calculation](./examples/mecce_gpu/mecce.py) and the [script](./examples/mecce_gpu/submit_perlmutter.sh) for submitting job to Perlmutter with 2 GPU nodes (4 GPUs per node).
+Explore the `examples/mecce_gpu` directory for a [demonstration calculation](./examples/mecce_gpu/mecce.py) and a [submission script](./examples/mecce_gpu/submit_perlmutter.sh) designed for running jobs on Perlmutter using 2 GPU nodes (4 GPUs per node).
 
-### Benchmarks
-Speedup with GPU4PyCCE on A100 (9.7 TFLOPS on FP64) over PyCCE on 1-core AMD EPYC 7763 (Milan) CPU (39.2 GFlops per core) (mecce example)
+### Performance Benchmarks
+GPU4PyCCE demonstrates substantial performance improvements when utilizing an NVIDIA A100 GPU (9.7 TFLOPS on FP64) compared to PyCCE running on a single-core AMD EPYC 7763 (Milan) CPU (39.2 GFLOPS per core). The following table outlines the speedup achieved in the [mecce example](./examples/mecce_gpu/) by leveraging GPU acceleration:
 
 | order               |   speedup |
 |:--------------------|----------:|
-| 1                   |      5    |
-| 2                   |     56    |
-| 3                   |    250    |
+| 1                   |      5x    |
+| 2                   |     56x    |
+| 3                   |    250x    |
