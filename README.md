@@ -32,16 +32,21 @@ Full documentation is available online at [Read the Docs](https://pycce.readthed
 ### Install on ***Perlmutter with GPU support***
 Please checkout [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh) for understanding the dependencies and installation steps.
 
-1. Run 
+- Run:
 ```bash
 bash ./examples/mecce_gpu/install_perlmutter.sh
 ```
-in the main folder.
+in the main folder to create conda environment `gpu4pycce` and install dependencies.
 
-2. Add the main folder to the `PYTHONPATH`
+- Add the main folder to the `PYTHONPATH` temporarily:
 ```bash
 CURRENT_PATH=`pwd`
 export PYTHONPATH="${PYTHONPATH}:${CURRENT_PATH}"
+```
+- Or Modify the `PYTHONPATH` permanently:
+```bash
+echo 'export PYTHONPATH="${PYTHONPATH}:{abs path of the current repo}"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ### GPU Usage
