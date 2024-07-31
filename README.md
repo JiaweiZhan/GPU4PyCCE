@@ -43,7 +43,7 @@ in the main folder to create conda environment `gpu4pycce` and install dependenc
 CURRENT_PATH=`pwd`
 export PYTHONPATH="${PYTHONPATH}:${CURRENT_PATH}"
 ```
-- Or Modify the `PYTHONPATH` permanently:
+- Or modify the `PYTHONPATH` permanently:
 ```bash
 echo 'export PYTHONPATH="${PYTHONPATH}:{abs path of the current repo}"' >> ~/.bashrc
 source ~/.bashrc
@@ -51,3 +51,12 @@ source ~/.bashrc
 
 ### GPU Usage
 See `examples/mecce_gpu` folder for [a demo calculation](./examples/mecce_gpu/mecce.py) and the [script](./examples/mecce_gpu/submit_perlmutter.sh) for submitting job to Perlmutter with 2 GPU nodes (4 GPUs per node).
+
+### Benchmarks
+Speedup with GPU4PyCCE on A100 (9.7 TFLOPS on FP64) over PyCCE on 1-core AMD EPYC 7763 (Milan) CPU (39.2 GFlops per core)
+
+| order               |   speedup |
+|:--------------------|----------:|
+| 1                   |      5    |
+| 2                   |     56    |
+| 3                   |    250    |
