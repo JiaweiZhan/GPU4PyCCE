@@ -65,7 +65,7 @@ calc = pc.Simulator(center, bath=electrons,
                     verbose=True, # verbose=Ture for outputing progress
                     )
 # move the simulator to the GPU device
-calc.to(f'cuda')
+calc.to('cuda')
 lmecce = calc.compute(ts, method='mecce', parallel=True)
 ```
 For a complete tutorial on using GPU4PyCCE, refer to the `examples/mecce_gpu` directory, which includes a [demonstration calculation](./examples/mecce_gpu/mecce.py) and a [submission script](./examples/mecce_gpu/submit_perlmutter.sh) for running jobs on Perlmutter using 2 GPU nodes (4 GPUs per node).
