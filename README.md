@@ -37,7 +37,7 @@ Full documentation is available online at [Read the Docs](https://pycce.readthed
 For detailed dependencies and installation instructions, refer to [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh)
 
 To set up the environment:
-1. To access Perlmutter via `ssh` you can do the following:
+1. Access Perlmutter via `ssh`:
 ```bash
 ssh <user>@perlmutter.nersc.gov
 ```
