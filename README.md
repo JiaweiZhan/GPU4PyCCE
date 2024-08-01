@@ -37,14 +37,24 @@ Full documentation is available online at [Read the Docs](https://pycce.readthed
 For detailed dependencies and installation instructions, refer to [install_perlmutter.sh](./examples/mecce_gpu/install_perlmutter.sh)
 
 To set up the environment:
+1. To access Perlmutter via `ssh` you can do the following:
+```bash
+ssh <user>@perlmutter.nersc.gov
+```
 
-1. Execute the installation script::
+2. Clone the latest stable version of GPU4PyCCE via:
+```bash
+git clone -b 'v0.1'  --single-branch --depth 1 git@github.com:JiaweiZhan/GPU4PyCCE.git
+cd GPU4PyCCE
+```
+
+3. Execute the installation script::
 ```bash
 bash ./examples/mecce_gpu/install_perlmutter.sh
 ```
 This will create the `gpu4pycce` Conda environment and install the necessary dependencies.
 
-2. Temporarily add the main directory to PYTHONPATH:
+4. Temporarily add the main directory to PYTHONPATH:
 ```bash
 CURRENT_PATH=`pwd`
 export PYTHONPATH="${PYTHONPATH}:${CURRENT_PATH}"
