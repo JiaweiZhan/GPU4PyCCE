@@ -36,6 +36,7 @@ def expand(matrix, i, dim):
     """
     dbefore = dim[:i].prod()
     dafter = dim[i + 1:].prod()
+    matrix = matrix.contiguous()
 
     expanded_matrix = torch.kron(torch.kron(torch.eye(dbefore, dtype=matrix.dtype, device=matrix.device), matrix),
                             torch.eye(dafter, dtype=torch.complex128, device=matrix.device))
