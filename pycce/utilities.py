@@ -8,7 +8,7 @@ import torch
 
 def config_torch(nthread=1):
     torch.set_num_threads(nthread)
-    torch.enable_grad(False)
+    torch.set_grad_enabled(False)
 
 def get_local_rank(method='slurm'):
     local_rank = None
